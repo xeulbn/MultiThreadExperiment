@@ -2,6 +2,7 @@ package org.example.multithreadprogramming.load.controller;
 
 import lombok.RequiredArgsConstructor;
 import org.example.multithreadprogramming.load.service.LoadService;
+import org.example.multithreadprogramming.load.service.MetricsService;
 import org.example.multithreadprogramming.load.service.RequestService;
 import org.example.multithreadprogramming.load.service.ThreadPoolConfigService;
 import org.example.multithreadprogramming.model.SiteResult;
@@ -20,6 +21,7 @@ public class ExperimentController {
     private final LoadService loadService;
     private final RequestService requestService;
     private final ThreadPoolConfigService threadPoolService;
+    private final MetricsService metricsService;
 
     @GetMapping("/cpu/async")
     public String runAsyncCpuTasks(){
@@ -56,5 +58,10 @@ public class ExperimentController {
         threadPoolService.updatePoolSettings(core,maximum,queue);
 
         return String.format("Updated thread pool : core=%d, maximum=%d, queue=%d", core, maximum, queue);
+    }
+
+    @GetMapping("/metrics")
+    public Map<String,Object> getMetrics(){
+        return metricsService.collectMetrics();
     }
 }
