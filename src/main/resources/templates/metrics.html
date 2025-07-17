@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Async & ThreadPool Metrics</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+            padding: 2rem;
+        }
+        h1 {
+            text-align: center;
+            color: #343a40;
+        }
+        .button-group, .metrics, .charts {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+        button, input[type=number] {
+            padding: 0.5rem 1rem;
+            font-size: 1rem;
+            border-radius: 4px;
+            border: 1px solid #ced4da;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .metrics-table, .result-table {
+            width: 80%;
+            margin: 0 auto;
+            border-collapse: collapse;
+            background: white;
+        }
+        th, td {
+            border: 1px solid #dee2e6;
+            padding: 0.75rem;
+            text-align: center;
+        }
+        th {
+            background-color: #e9ecef;
+        }
+        canvas {
+            margin-top: 2rem;
+            max-width: 800px;
+        }
+    </style>
+</head>
+<body>
+<h1>📊 Async Metrics Dashboard</h1>
+
+<div class="button-group">
+    <button onclick="trigger('/cpu/sync')">CPU Sync</button>
+    <button onclick="trigger('/cpu/async')">CPU Async</button>
+    <button onclick="triggerIO('/io/sync')">IO Sync</button>
+    <button onclick="triggerIO('/io/async')">IO Async</button>
+</div>
+
+<div class="button-group">
+    <input type="number" id="core" placeholder="core">
+    <input type="number" id="max" placeholder="max">
+    <input type="number" id="queue" placeholder="queue">
+    <button onclick="updateConfig()">Update ThreadPool</button>
+</div>
+
+<div class="button-group">
+    <button onclick="loadMetrics()">Load /metrics</button>
+    <button onclick="downloadCSV()">Download CSV</button>
+</div>
+
+<table class="metrics-table" id="metricsTable">
+    <thead><tr><th>Metric</th><th>Value</th></tr></thead>
+    <tbody id="metricsBody"></tbody>
+</table>
+
+<h2 style="text-align:center; margin-top: 2rem">📈 CPU Usage Chart</h2>
+<div class="charts">
+    <canvas id="cpuChart"></canvas>
+</div>
+
+<h2 style="text-align:center; margin-top: 2rem">⏱ Response Times</h2>
+<table class="result-table" id="resultTable">
+    <thead><tr><th>Site</th><th>Response Time (ms)</th></tr></thead>
+    <tbody id="resultBody"></tbody>
+</table>
+
+<script>
+    let cpuData = [];
+    const ctx = document.getElementById('cpuChart').getContext('2d');
+    const cpuChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [{
+                label: 'CPU Usage %',
+                data: [],
+                borderColor: 'rgba(75, 192, 192, 1)',
+                borderWidth: 2,
+                fill: false
+            }]
+        },
+        options: {
+            scales: { y: { min: 0, max: 100 } }
+        }
+    });
+
+    function trigger(endpoint) {
+        fetch(endpoint)
+            .then(res => res.text())
+            .then(msg => alert(msg))
+            .catch(err => alert("Error: " + err));
+    }
+
+    function triggerIO(endpoint) {
+        fetch(endpoint)
+            .then(res => res.json())
+            .then(data => {
+                const tbody = document.getElementById("resultBody");
+                tbody.innerHTML = "";
+                data.forEach(row => {
+                    tbody.innerHTML += `<tr><td>${row.url}</td><td>${row.time}</td></tr>`;
+                });
+            });
+    }
+
+    function updateConfig() {
+        const core = document.getElementById('core').value;
+        const max = document.getElementById('max').value;
+        const queue = document.getElementById('queue').value;
+        fetch('/threadpool/config', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({core: parseInt(core), maximum: parseInt(max), queue: parseInt(queue)})
+        })
+            .then(res => res.text())
+            .then(msg => alert(msg))
+            .catch(err => alert("Error: " + err));
+    }
+
+    function loadMetrics() {
+        fetch('/metrics')
+            .then(res => res.json())
+            .then(data => {
+                const body = document.getElementById("metricsBody");
+                body.innerHTML = "";
+                const timestamp = new Date().toLocaleTimeString();
+                for (const key in data) {
+                    if (key.toLowerCase().includes('cpu')) {
+                        cpuChart.data.labels.push(timestamp);
+                        cpuChart.data.datasets[0].data.push(data[key]);
+                        cpuChart.update();
+                    }
+                    body.innerHTML += `<tr><td>${key}</td><td>${data[key]}</td></tr>`;
+                }
+            });
+    }
+
+    function downloadCSV() {
+        const rows = Array.from(document.querySelectorAll("#resultTable tr"));
+        const csv = rows.map(row => Array.from(row.children).map(cell => cell.textContent).join(",")).join("\n");
+        const blob = new Blob([csv], {type: 'text/csv'});
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'response_times.csv';
+        a.click();
+    }
+</script>
+</body>
+</html>

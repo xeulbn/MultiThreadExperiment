@@ -20,7 +20,7 @@ public class RequestService {
             "https://toss.im", "https://www.wikipedia.org",
             "https://www.stackoverflow.com", "https://www.github.com",
             "https://www.microsoft.com", "https://www.apple.com",
-            "https://www.amazon.com", "https://www.netflix.com"
+            "https://www.youtube.com", "https://www.netflix.com"
     );
 
     private final RestTemplate restTemplate= new RestTemplate();

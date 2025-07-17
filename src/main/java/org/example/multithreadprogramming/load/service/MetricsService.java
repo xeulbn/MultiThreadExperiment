@@ -1,5 +1,6 @@
 package org.example.multithreadprogramming.load.service;
 
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
 
@@ -12,9 +13,14 @@ import java.util.Map;
 @Service
 public class MetricsService {
 
+    private final ThreadPoolTaskExecutor executor;
+
+    public MetricsService(ThreadPoolTaskExecutor executor) {
+        this.executor = executor;
+    }
+
     public Map<String, Object> collectMetrics(){
         Map<String, Object> metrics = new HashMap<>();
-        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
 
         metrics.put("activeThreads", executor.getActiveCount());
         metrics.put("corePoolSize", executor.getCorePoolSize());
