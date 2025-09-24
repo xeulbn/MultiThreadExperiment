@@ -12,6 +12,8 @@
 
 --- 
 ## 전체 동작 순서도 (High-level Flow)
+<img width="1184" height="842" alt="스크린샷 2025-09-24 오후 1 24 25" src="https://github.com/user-attachments/assets/8ed42bc4-48c9-47c8-a139-710da5a2fc62" />
+
 
 ## 스레드풀 & 백프레셔(CallerRunsPolicy) 순서도
 
