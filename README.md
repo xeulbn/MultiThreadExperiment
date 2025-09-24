@@ -15,11 +15,12 @@
 <img width="1184" height="842" alt="스크린샷 2025-09-24 오후 1 24 25" src="https://github.com/user-attachments/assets/8ed42bc4-48c9-47c8-a139-710da5a2fc62" />
 
 
-## 스레드풀 & 백프레셔(CallerRunsPolicy) 순서도
-
 ## 플랫폼 스레드 vs 가상 스레드 비교 플로우
+<img width="1131" height="166" alt="image" src="https://github.com/user-attachments/assets/876825f9-b796-4593-96fc-b01bb1848709" />
+
 
 ## Mailbox vs Process IPC 플로우
+<img width="784" height="555" alt="image" src="https://github.com/user-attachments/assets/ac1b3054-f4a9-4c57-b749-28ee145f2846" />
 
 
 ---
