@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Concurrency Demo Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: system-ui, sans-serif; margin: 24px; }
+        .row { display: flex; gap: 24px; flex-wrap: wrap; }
+        .card { padding: 16px; border: 1px solid #eee; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,.05);}
+        canvas { width: 520px; height: 280px; }
+        label { margin-right: 8px; }
+    </style>
+</head>
+<body>
+<h2>Concurrency Demo Dashboard</h2>
+<div class="row">
+    <div class="card">
+        <h3>CPU (tasks x rounds)</h3>
+        <div>
+            <label>tasks<input id="cpuTasks" type="number" value="100"></label>
+            <label>rounds<input id="cpuRounds" type="number" value="100000"></label>
+            <button onclick="runCpu()">Run</button>
+        </div>
+        <canvas id="cpuChart"></canvas>
+        <pre id="cpuOut"></pre>
+    </div>
+    <div class="card">
+        <h3>I/O (tasks with sleep ms)</h3>
+        <div>
+            <label>tasks<input id="ioTasks" type="number" value="1000"></label>
+            <label>sleep(ms)<input id="ioMs" type="number" value="100"></label>
+            <button onclick="runIo()">Run</button>
+        </div>
+        <canvas id="ioChart"></canvas>
+        <pre id="ioOut"></pre>
+    </div>
+    <div class="card">
+        <h3>Thread Pool</h3>
+        <div id="poolState"></div>
+        <div>
+            <label>core<input id="core" type="number" value="4"></label>
+            <label>max<input id="max" type="number" value="16"></label>
+            <button onclick="resizePool()">Resize</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const cpuCtx = new Chart(document.getElementById('cpuChart'), {
+        type: 'bar', data: {labels: ['sync','platform','virtual'], datasets:[{label:'ms', data:[0,0,0]}]}, options:{responsive:false}
+    });
+    const ioCtx = new Chart(document.getElementById('ioChart'), {
+        type: 'bar', data: {labels: ['sync','platform','virtual'], datasets:[{label:'ms', data:[0,0,0]}]}, options:{responsive:false}
+    });
+    async function runCpu(){
+        const tasks = +document.getElementById('cpuTasks').value;
+        const rounds= +document.getElementById('cpuRounds').value;
+        const res = await fetch(`/exp/cpu?tasks=${tasks}&rounds=${rounds}`).then(r=>r.json());
+        cpuCtx.data.datasets[0].data=[res.sync_ms,res.platform_ms,res.virtual_ms];
+        cpuCtx.update(); document.getElementById('cpuOut').textContent=JSON.stringify(res,null,2);
+    }
+    async function runIo(){
+        const tasks = +document.getElementById('ioTasks').value;
+        const ms    = +document.getElementById('ioMs').value;
+        const res = await fetch(`/exp/io?tasks=${tasks}&ms=${ms}`).then(r=>r.json());
+        ioCtx.data.datasets[0].data=[res.sync_ms,res.platform_ms,res.virtual_ms];
+        ioCtx.update(); document.getElementById('ioOut').textContent=JSON.stringify(res,null,2);
+    }
+    async function pool(){
+        const s = await fetch('/pool/state').then(r=>r.json());
+        document.getElementById('poolState').textContent = JSON.stringify(s,null,2);
+    }
+    async function resizePool(){
+        const core = +document.getElementById('core').value;
+        const max  = +document.getElementById('max').value;
+        await fetch(`/pool/resize?core=${core}&max=${max}`,{method:'POST'});
+        pool();
+    }
+    pool();
+</script>
+</body>
+</html>
