@@ -1,6 +1,7 @@
 package org.example.multithreadprogramming.load.service;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
@@ -10,12 +11,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
-import java.util.stream.IntStream;
+
 
 @Service
 @RequiredArgsConstructor
 public class LoadService {
-    private final ThreadPoolTaskExecutor platformExecutor;
+    private final @Qualifier("platformExecutor") ThreadPoolTaskExecutor platformExecutor;
     private final ExecutorService virtualPerTaskExecutor;
 
     // === CPU 바운드 작업 ===
@@ -33,7 +34,7 @@ public class LoadService {
         }
     }
 
-    // === I/O 바운드 흉내 (블로킹 sleep) ===
+    // === I/O 바운드 (블로킹 sleep) ===
     public String ioSleep(long ms) {
         try {
             Thread.sleep(ms); // 가짜 Blocking I/O

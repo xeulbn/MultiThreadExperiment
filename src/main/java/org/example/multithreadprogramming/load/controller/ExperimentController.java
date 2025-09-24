@@ -2,11 +2,10 @@ package org.example.multithreadprogramming.load.controller;
 
 import lombok.RequiredArgsConstructor;
 import org.example.multithreadprogramming.load.service.*;
-import org.example.multithreadprogramming.model.SiteResult;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
+
 import java.util.Map;
 import java.util.concurrent.ThreadPoolExecutor;
 
@@ -69,7 +68,7 @@ public class ExperimentController {
         return Map.of("messages", messages, "elapsed_ms", ms, "type", "process-stdin/stdout");
     }
 
-    // ===== (유사) 공유 메모리: mmap =====
+    // ===== 공유 메모리: mmap =====
     @GetMapping("/exp/mmap")
     public Map<String, Object> mmap(@RequestParam(defaultValue = "10000000") int bytes) throws Exception {
         long ms = mmapDemoService.writeReadMmap(bytes);
