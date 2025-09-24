@@ -22,10 +22,19 @@
 ## Mailbox vs Process IPC 플로우
 <img width="784" height="555" alt="image" src="https://github.com/user-attachments/assets/ac1b3054-f4a9-4c57-b749-28ee145f2846" />
 
+---
+## 실험 결과
+
+### IO 바운드 실험
+<img width="539" height="480" alt="image" src="https://github.com/user-attachments/assets/4a837795-5b02-424e-afbc-fa6840e8d44d" />
+
+
+### CPU 바운드 실험
+<img width="552" height="492" alt="image" src="https://github.com/user-attachments/assets/a7c94176-7906-4f3a-a05a-475be11c51ea" />
+
 
 ---
 ## 느낀점
 
 - 가상 스레드는 I/O 대기가 많은 워크로드에서 동시성↑ 비용↓ 효과가 큽니다.
 - CallerRunsPolicy는 실패/유실 대신 “진입 속도 조절”을 선택하는 전략으로 대기 시간을 늘리는 대신, 시스템 전체 붕괴를 방지합니다.
-- nmap은 항상 빠르지 않으며, 패턴/플랫폼/디스크 상황에 따라 다릅니다.
