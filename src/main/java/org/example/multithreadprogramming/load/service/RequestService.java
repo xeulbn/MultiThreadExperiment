@@ -1,5 +1,6 @@
 package org.example.multithreadprogramming.load.service;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.multithreadprogramming.model.SiteResult;
 import org.springframework.scheduling.annotation.Async;
@@ -13,6 +14,7 @@ import java.util.concurrent.ExecutionException;
 
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class RequestService {
 
     private final List<String> urls=List.of(
@@ -22,6 +24,8 @@ public class RequestService {
             "https://www.microsoft.com", "https://www.apple.com",
             "https://www.youtube.com", "https://www.netflix.com"
     );
+
+    private final HttpAsyncClient httpAsyncClient;
 
     private final RestTemplate restTemplate= new RestTemplate();
 
@@ -33,37 +37,28 @@ public class RequestService {
         return results;
     }
 
-    public List<SiteResult> asyncRequest(){
+    public List<SiteResult> asyncRequest() {
         List<CompletableFuture<SiteResult>> futures = new ArrayList<>();
-        for(String url : urls){
-            futures.add(callSiteAsync(url));
+        for (String url : urls) {
+            futures.add(httpAsyncClient.callSiteAsync(url));
         }
         CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
-        List<SiteResult> results=new ArrayList<>();
 
-        for(CompletableFuture<SiteResult> future : futures){
-            try{
-                results.add(future.get());
-            } catch (InterruptedException | ExecutionException e) {
-                log.error("Error during async call",e);
-            }
+        List<SiteResult> results = new ArrayList<>();
+        for (CompletableFuture<SiteResult> f : futures) {
+            results.add(f.join());
         }
         return results;
     }
 
-    private SiteResult callSite (String url){
-        long start= System.currentTimeMillis();
-        try{
-            restTemplate.getForObject(url,String.class);
-        }catch(Exception e){
-            log.warn("Request failed : {}",url);
+    private SiteResult callSite(String url) {
+        long start = System.currentTimeMillis();
+        try {
+            restTemplate.getForObject(url, String.class);
+        } catch (Exception ignored) {
+
         }
         long end = System.currentTimeMillis();
-        return new SiteResult(url,end-start);
-    }
-
-    @Async
-    public CompletableFuture<SiteResult> callSiteAsync (String url){
-        return CompletableFuture.completedFuture(callSite(url));
+        return new SiteResult(url, end - start);
     }
 }

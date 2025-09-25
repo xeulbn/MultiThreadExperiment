@@ -1,6 +1,7 @@
 package org.example.multithreadprogramming.load.service;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
 
@@ -9,6 +10,8 @@ import java.util.concurrent.ThreadPoolExecutor;
 @Service
 @RequiredArgsConstructor
 public class ThreadPoolConfigService {
+
+    @Qualifier("platformExecutor")
     private final ThreadPoolTaskExecutor taskExecutor;
 
     public ThreadPoolTaskExecutor getExecutor() {

@@ -14,7 +14,7 @@ public class RaceDemoService {
         counter = 0;
         IntStream.range(0, threads).parallel().forEach(t -> {
             for (int i = 0; i < iters; i++) {
-                counter++; // 레이스!
+                counter++;
             }
         });
         return counter;

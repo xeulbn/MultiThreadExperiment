@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ko">
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8"/>
     <title>Concurrency Demo Dashboard</title>
@@ -10,63 +10,152 @@
         .card { padding: 16px; border: 1px solid #eee; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,.05);}
         canvas { width: 520px; height: 280px; }
         label { margin-right: 8px; }
+        pre { background:#fafafa; padding:12px; border-radius:8px; max-width:520px; overflow:auto; }
+        .small { font-size:12px; color:#666; }
+        button { cursor:pointer; }
+        h2 { margin-bottom: 12px; }
     </style>
 </head>
 <body>
 <h2>Concurrency Demo Dashboard</h2>
+
 <div class="row">
+    <!-- CPU -->
     <div class="card">
         <h3>CPU (tasks x rounds)</h3>
         <div>
-            <label>tasks<input id="cpuTasks" type="number" value="100"></label>
-            <label>rounds<input id="cpuRounds" type="number" value="100000"></label>
+            <label>tasks <input id="cpuTasks" type="number" value="100"></label>
+            <label>rounds <input id="cpuRounds" type="number" value="100000"></label>
             <button onclick="runCpu()">Run</button>
         </div>
         <canvas id="cpuChart"></canvas>
         <pre id="cpuOut"></pre>
     </div>
+
+    <!-- IO -->
     <div class="card">
         <h3>I/O (tasks with sleep ms)</h3>
         <div>
-            <label>tasks<input id="ioTasks" type="number" value="1000"></label>
-            <label>sleep(ms)<input id="ioMs" type="number" value="100"></label>
+            <label>tasks <input id="ioTasks" type="number" value="1000"></label>
+            <label>sleep(ms) <input id="ioMs" type="number" value="100"></label>
             <button onclick="runIo()">Run</button>
         </div>
         <canvas id="ioChart"></canvas>
         <pre id="ioOut"></pre>
     </div>
+
+    <div class="card">
+        <h3>HTTP Fan-out (sync vs @Async)</h3>
+        <div>
+            <button onclick="runHttp('sync')">Run Sync</button>
+            <button onclick="runHttp('async')">Run Async</button>
+        </div>
+        <pre id="httpOut"></pre>
+        <div class="small">동일 URL 세트를 동기/비동기로 호출. total_ms를 비교해보세요.</div>
+    </div>
+
+    <!-- Thread Pool -->
     <div class="card">
         <h3>Thread Pool</h3>
-        <div id="poolState"></div>
-        <div>
-            <label>core<input id="core" type="number" value="4"></label>
-            <label>max<input id="max" type="number" value="16"></label>
+        <div id="poolState" class="small">loading...</div>
+        <div style="margin-top:8px;">
+            <label>core <input id="core" type="number" value="4"></label>
+            <label>max <input id="max" type="number" value="16"></label>
             <button onclick="resizePool()">Resize</button>
+        </div>
+        <div class="small" style="margin-top:8px;">
+            CallerRunsPolicy로 백프레셔 체험 (queueCapacity=200)
         </div>
     </div>
 </div>
 
+<div class="row" style="margin-top:24px;">
+    <!-- Mailbox -->
+    <div class="card">
+        <h3>Mailbox PingPong (threads)</h3>
+        <div>
+            <label>messages <input id="mbxMsgs" type="number" value="100000"></label>
+            <button onclick="runMailbox()">Run</button>
+        </div>
+        <pre id="mbxOut"></pre>
+    </div>
+
+    <!-- Proc IPC -->
+    <div class="card">
+        <h3>Process IPC PingPong</h3>
+        <div>
+            <label>messages <input id="procMsgs" type="number" value="50000"></label>
+            <button onclick="runProc()">Run</button>
+        </div>
+        <pre id="procOut"></pre>
+        <div class="small">※ 자바 서브프로세스 생성 + stdin/stdout 파이프</div>
+    </div>
+
+    <!-- mmap -->
+    <div class="card">
+        <h3>mmap I/O</h3>
+        <div>
+            <label>bytes <input id="mmapBytes" type="number" value="1048576"></label>
+            <button onclick="runMmap()">Run</button>
+        </div>
+        <pre id="mmapOut"></pre>
+        <div class="small">※ 임시파일 메모리맵핑 후 쓰기 + force()</div>
+    </div>
+</div>
+
+<div class="row" style="margin-top:24px;">
+    <!-- Race Demo -->
+    <div class="card">
+        <h3>Race Demo (Counter)</h3>
+        <div>
+            <label>threads <input id="raceThreads" type="number" value="16"></label>
+            <label>iters <input id="raceIters" type="number" value="100000"></label>
+            <button onclick="runRace()">Run</button>
+        </div>
+        <pre id="raceOut"></pre>
+        <div class="small">no-lock vs lock vs atomic 결과 비교</div>
+    </div>
+</div>
+
 <script>
+    // --- Charts ---
     const cpuCtx = new Chart(document.getElementById('cpuChart'), {
-        type: 'bar', data: {labels: ['sync','platform','virtual'], datasets:[{label:'ms', data:[0,0,0]}]}, options:{responsive:false}
+        type: 'bar',
+        data: {labels: ['sync','platform','virtual'], datasets:[{label:'ms', data:[0,0,0]}]},
+        options:{responsive:false}
     });
     const ioCtx = new Chart(document.getElementById('ioChart'), {
-        type: 'bar', data: {labels: ['sync','platform','virtual'], datasets:[{label:'ms', data:[0,0,0]}]}, options:{responsive:false}
+        type: 'bar',
+        data: {labels: ['sync','platform','virtual'], datasets:[{label:'ms', data:[0,0,0]}]},
+        options:{responsive:false}
     });
+
+    // --- CPU ---
     async function runCpu(){
         const tasks = +document.getElementById('cpuTasks').value;
         const rounds= +document.getElementById('cpuRounds').value;
         const res = await fetch(`/exp/cpu?tasks=${tasks}&rounds=${rounds}`).then(r=>r.json());
         cpuCtx.data.datasets[0].data=[res.sync_ms,res.platform_ms,res.virtual_ms];
-        cpuCtx.update(); document.getElementById('cpuOut').textContent=JSON.stringify(res,null,2);
+        cpuCtx.update();
+        document.getElementById('cpuOut').textContent=JSON.stringify(res,null,2);
     }
+
+    // --- IO ---
     async function runIo(){
         const tasks = +document.getElementById('ioTasks').value;
         const ms    = +document.getElementById('ioMs').value;
         const res = await fetch(`/exp/io?tasks=${tasks}&ms=${ms}`).then(r=>r.json());
         ioCtx.data.datasets[0].data=[res.sync_ms,res.platform_ms,res.virtual_ms];
-        ioCtx.update(); document.getElementById('ioOut').textContent=JSON.stringify(res,null,2);
+        ioCtx.update();
+        document.getElementById('ioOut').textContent=JSON.stringify(res,null,2);
     }
+
+    async function runHttp(mode){
+        const res = await fetch(`/exp/http/${mode}`).then(r=>r.json());
+        document.getElementById('httpOut').textContent = JSON.stringify(res, null, 2);
+    }
+
+    // --- Pool ---
     async function pool(){
         const s = await fetch('/pool/state').then(r=>r.json());
         document.getElementById('poolState').textContent = JSON.stringify(s,null,2);
@@ -77,6 +166,37 @@
         await fetch(`/pool/resize?core=${core}&max=${max}`,{method:'POST'});
         pool();
     }
+
+    // --- Mailbox ---
+    async function runMailbox(){
+        const msg = +document.getElementById('mbxMsgs').value;
+        const res = await fetch(`/exp/mailbox?messages=${msg}`).then(r=>r.json());
+        document.getElementById('mbxOut').textContent = JSON.stringify(res,null,2);
+    }
+
+    // --- Proc IPC ---
+    async function runProc(){
+        const msg = +document.getElementById('procMsgs').value;
+        const res = await fetch(`/exp/proc?messages=${msg}`).then(r=>r.json());
+        document.getElementById('procOut').textContent = JSON.stringify(res,null,2);
+    }
+
+    // --- mmap ---
+    // 컨트롤러가 /exp/nmap 라우트를 사용하므로 여기서도 nmap 사용.
+    async function runMmap(){
+        const bytes = +document.getElementById('mmapBytes').value;
+        const res = await fetch(`/exp/mmap?bytes=${bytes}`).then(r=>r.json());
+        document.getElementById('mmapOut').textContent = JSON.stringify(res,null,2);
+    }
+
+    // --- Race ---
+    async function runRace(){
+        const threads = +document.getElementById('raceThreads').value;
+        const iters   = +document.getElementById('raceIters').value;
+        const res = await fetch(`/exp/race?threads=${threads}&iters=${iters}`).then(r=>r.json());
+        document.getElementById('raceOut').textContent = JSON.stringify(res,null,2);
+    }
+
     pool();
 </script>
 </body>
